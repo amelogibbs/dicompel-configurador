@@ -2,7 +2,6 @@ import os
 import sys
 from pathlib import Path
 
-# Adicionar backend ao path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from fastapi import FastAPI
@@ -11,7 +10,6 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.main import app as api_app
 
-# Criar app principal
 app = FastAPI()
 
 # CORS
@@ -27,11 +25,11 @@ app.add_middleware(
 for route in api_app.routes:
     app.routes.append(route)
 
-# Servir arquivos estáticos do React
+# Servir React
 static_dir = os.path.join(os.path.dirname(__file__), "frontend", "dist")
 
 if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
 
 
     @app.get("/{full_path:path}")
