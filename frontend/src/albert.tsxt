@@ -1,0 +1,85 @@
+import React, { useState, useEffect } from "react";
+
+import { Layout } from "./components/Layout";
+import { Catalog } from "./pages/Catalog";
+import { Cart } from "./pages/Cart";
+import { Login } from "./pages/Login";
+import { Dashboard } from "./pages/Dashboard";
+import { Orders } from "./pages/Orders";
+import { AdminProducts } from "./pages/AdminProducts";
+import { authService, orderService } from "./services/api";
+
+interface User {
+  id: number;
+  nome: string;
+  email: string;
+  perfil: "ADMIN" | "SUPERVISOR" | "REPRESENTANTE";
+}
+
+const App: React.FC = () => {
+  const [user, setUser] = useState<User | null>(
+    authService.getCurrentUser()
+  );
+
+  const [currentPage, setCurrentPage] = useState("catalog");
+  const [cartCount, setCartCount] = useState(0);
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        const orders = await orderService.getAll();
+        const pending = orders.filter(
+          (o: any) => (o.status || "NORMAL") === "PENDING"
+        );
+        setNewOrdersCount(pending.length);
+      } catch {}
+    };
+
+    if (user?.perfil === "ADMIN" || user?.perfil === "SUPERVISOR") {
+      loadOrders();
+    }
+  }, [user]);
+
+  const navigate = (page: string) => setCurrentPage(page);
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case "catalog":
+        return <Catalog setCartCount={setCartCount} />;
+
+      case "cart":
+        return <Cart user={user} setCartCount={setCartCount} navigate={navigate} />;
+
+      case "login":
+        return <Login navigate={navigate} setUser={setUser} />;
+
+      case "dashboard":
+        return <Dashboard user={user} />;
+
+      case "orders":
+        return <Orders navigate={navigate} />;
+
+      case "admin-products":
+        return <AdminProducts navigate={navigate} />;
+
+      default:
+        return <Catalog setCartCount={setCartCount} />;
+    }
+  };
+
+  return (
+    <Layout
+      user={user}
+      setUser={setUser}
+      cartCount={cartCount}
+      newOrdersCount={newOrdersCount}
+      currentPage={currentPage}
+      navigate={navigate}
+    >
+      {renderPage()}
+    </Layout>
+  );
+};
+
+export default App;
