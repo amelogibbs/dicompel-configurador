@@ -1,10 +1,14 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, List
-from backend.database import get_connection
+from pathlib import Path
+import os
 import logging
 import datetime
+from backend.database import get_connection
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -12,6 +16,16 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+# ===== SERVIR FRONTEND =====
+frontend_dist = Path(__file__).parent / "frontend" / "dist"
+
+if frontend_dist.exists():
+    print(f"✅ Frontend encontrado em: {frontend_dist}")
+    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
+else:
+    print(f"⚠️  Frontend não encontrado em: {frontend_dist}")
+
+# ===== CORS =====
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -936,6 +950,33 @@ def root():
             "health": "GET /health"
         }
     }
-       if __name__ == "__main__":
-       import uvicorn
-       uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+# ======= SERVIR FRONTEND - CATCH-ALL =======
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    """Serve frontend files, fallback to index.html for SPA routing"""
+    file_path = frontend_dist / full_path
+    
+    if file_path.exists() and file_path.is_file():
+        return FileResponse(file_path)
+    
+    # Fallback para index.html (SPA routing)
+    index_path = frontend_dist / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
+    
+    return {"error": "Frontend não encontrado"}
+
+
+# ======= INICIALIZAÇÃO =======
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    print(f"\n{'=' * 50}")
+    print(f"🚀 Iniciando DICOMPEL API")
+    print(f"{'=' * 50}")
+    print(f"Porta: {port}")
+    print(f"Frontend: {frontend_dist}")
+    print(f"{'=' * 50}\n")
+    uvicorn.run(app, host="0.0.0.0", port=port)
