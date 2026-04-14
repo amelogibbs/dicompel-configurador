@@ -8,7 +8,6 @@ from pathlib import Path
 import os
 import logging
 import datetime
-from backend.database import get_connection
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -34,12 +33,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # ======= MODELOS =======
 class LoginRequest(BaseModel):
     email: str
     password: str
-
 
 class OrderItem(BaseModel):
     productId: str
@@ -47,7 +44,6 @@ class OrderItem(BaseModel):
     productName: str
     quantity: int
     price: float = 0
-
 
 class OrderPayload(BaseModel):
     representativeId: str
@@ -58,14 +54,12 @@ class OrderPayload(BaseModel):
     totalQuantity: int
     createdAt: str
 
-
 class UpdateOrderPayload(BaseModel):
     CustomerName: Optional[str] = None
     CustomerEmail: Optional[str] = None
     CustomerPhone: Optional[str] = None
     Status: Optional[str] = None
     itens: Optional[List[OrderItem]] = None
-
 
 class ProductPayload(BaseModel):
     code: str
@@ -77,10 +71,11 @@ class ProductPayload(BaseModel):
     colors: Optional[List[str]] = []
     imageUrl: Optional[str] = ""
 
-
 # ======= LOGIN =======
 @app.post("/login")
 def login(data: LoginRequest):
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -115,10 +110,11 @@ def login(data: LoginRequest):
         if conn:
             conn.close()
 
-
 # ======= PRODUTOS - GET =======
 @app.get("/products")
 def products():
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -161,10 +157,11 @@ def products():
         if conn:
             conn.close()
 
-
 # ======= PRODUTOS - CREATE =======
 @app.post("/products")
 def create_product(payload: ProductPayload):
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -198,10 +195,11 @@ def create_product(payload: ProductPayload):
         if conn:
             conn.close()
 
-
 # ======= PRODUTOS - UPDATE =======
 @app.put("/products/{product_id}")
 def update_product(product_id: str, payload: ProductPayload):
+    from backend.database import get_connection
+    
     conn = None
     try:
         if not product_id or product_id == "NaN":
@@ -242,10 +240,11 @@ def update_product(product_id: str, payload: ProductPayload):
         if conn:
             conn.close()
 
-
 # ======= PRODUTOS - DELETE =======
 @app.delete("/products/{product_id}")
 def delete_product(product_id: str):
+    from backend.database import get_connection
+    
     conn = None
     try:
         if not product_id or product_id == "NaN":
@@ -314,10 +313,11 @@ def delete_product(product_id: str):
             conn.close()
         print(f"{'=' * 50}\n")
 
-
 # ======= TODOS PEDIDOS =======
 @app.get("/orders")
 def all_orders():
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -366,10 +366,11 @@ def all_orders():
         if conn:
             conn.close()
 
-
 # ======= PEDIDOS REPRESENTANTE =======
 @app.get("/orders/representante/{rep_id}")
 def get_orders_by_rep(rep_id: str):
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -412,10 +413,11 @@ def get_orders_by_rep(rep_id: str):
         if conn:
             conn.close()
 
-
 # ======= PEDIDO COM ITENS =======
 @app.get("/orders/{order_id}")
 def get_order_with_items(order_id: int):
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -486,10 +488,11 @@ def get_order_with_items(order_id: int):
         if conn:
             conn.close()
 
-
 # ======= CRIAR PEDIDO =======
 @app.post("/orders")
 def create_order(payload: OrderPayload):
+    from backend.database import get_connection
+    
     conn = None
     try:
         if not payload.representativeId or not payload.items:
@@ -531,7 +534,9 @@ def create_order(payload: OrderPayload):
         print(f"Pedido ID: {order_id}")
 
         cursor.execute("SELECT OrderNumber FROM Orders WHERE OrderId = ?", (order_id,))
+
         order_number_row = cursor.fetchone()
+
         numero_pedido = order_number_row[0] if order_number_row else f"PED-{order_id}"
 
         for item in payload.items:
@@ -565,10 +570,11 @@ def create_order(payload: OrderPayload):
         if conn:
             conn.close()
 
-
 # ======= ATUALIZAR PEDIDO =======
 @app.put("/orders/{order_id}")
 def update_order(order_id: int, payload: UpdateOrderPayload):
+    from backend.database import get_connection
+    
     conn = None
     try:
         if not order_id:
@@ -578,6 +584,7 @@ def update_order(order_id: int, payload: UpdateOrderPayload):
         cursor = conn.cursor()
 
         cursor.execute("SELECT OrderId FROM Orders WHERE OrderId = ?", (order_id,))
+
         if not cursor.fetchone():
             return {"success": False, "message": "Pedido não encontrado"}
 
@@ -613,10 +620,11 @@ def update_order(order_id: int, payload: UpdateOrderPayload):
         if conn:
             conn.close()
 
-
 # ======= DELETAR PEDIDO =======
 @app.delete("/orders/{order_id}")
 def delete_order(order_id: int):
+    from backend.database import get_connection
+    
     conn = None
     try:
         if not order_id:
@@ -630,6 +638,7 @@ def delete_order(order_id: int):
         print(f"{'=' * 50}")
 
         cursor.execute("SELECT OrderId FROM Orders WHERE OrderId = ?", (order_id,))
+
         if not cursor.fetchone():
             print(f"❌ Pedido não encontrado")
             return {"success": False, "message": "Pedido não encontrado"}
@@ -658,10 +667,11 @@ def delete_order(order_id: int):
         if conn:
             conn.close()
 
-
 # ======= FILTROS DINÂMICOS =======
 @app.get("/filters")
 def get_filters():
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -701,10 +711,11 @@ def get_filters():
         if conn:
             conn.close()
 
-
 # ======= REPRESENTANTES - GET TODOS =======
 @app.get("/representatives")
 def get_representatives():
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -740,10 +751,11 @@ def get_representatives():
         if conn:
             conn.close()
 
-
 # ======= REPRESENTANTES - CREATE =======
 @app.post("/representatives")
 def create_representative(payload: dict):
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -786,10 +798,11 @@ def create_representative(payload: dict):
         if conn:
             conn.close()
 
-
 # ======= REPRESENTANTES - UPDATE =======
 @app.put("/representatives/{rep_id}")
 def update_representative(rep_id: int, payload: dict):
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -807,6 +820,7 @@ def update_representative(rep_id: int, payload: dict):
         senha = payload.get("senha")
 
         cursor.execute("SELECT id FROM usuarios WHERE id = ?", (rep_id,))
+
         if not cursor.fetchone():
             return {"success": False, "message": "Representante não encontrado"}
 
@@ -840,10 +854,11 @@ def update_representative(rep_id: int, payload: dict):
         if conn:
             conn.close()
 
-
 # ======= REPRESENTANTES - DELETE =======
 @app.delete("/representatives/{rep_id}")
 def delete_representative(rep_id: int):
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -854,6 +869,7 @@ def delete_representative(rep_id: int):
         print(f"{'=' * 50}")
 
         cursor.execute("SELECT id FROM usuarios WHERE id = ?", (rep_id,))
+
         if not cursor.fetchone():
             return {"success": False, "message": "Representante não encontrado"}
 
@@ -875,10 +891,11 @@ def delete_representative(rep_id: int):
         if conn:
             conn.close()
 
-
 # ======= ESTATÍSTICAS =======
 @app.get("/stats/summary")
 def get_stats_summary():
+    from backend.database import get_connection
+    
     conn = None
     try:
         conn = get_connection()
@@ -926,12 +943,10 @@ def get_stats_summary():
         if conn:
             conn.close()
 
-
 # ======= HEALTH CHECK =======
 @app.get("/health")
 def health():
     return {"status": "ok", "message": "API funcionando corretamente"}
-
 
 # ======= ROOT =======
 @app.get("/")
@@ -951,7 +966,6 @@ def root():
         }
     }
 
-
 # ======= SERVIR FRONTEND - CATCH-ALL =======
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
@@ -967,7 +981,6 @@ async def serve_frontend(full_path: str):
         return FileResponse(index_path)
     
     return {"error": "Frontend não encontrado"}
-
 
 # ======= INICIALIZAÇÃO =======
 if __name__ == "__main__":
