@@ -1,12 +1,8 @@
 #!/bin/bash
-echo "🔨 Instalando dependências do frontend..."
-cd frontend
-npm install
-npm run build
-cd ..
+set -e
 
-echo "🔨 Instalando dependências do backend..."
+echo "Installing dependencies..."
 pip install -r requirements.txt
 
-echo "🚀 Iniciando aplicação..."
+echo "Starting application..."
 python main.py
