@@ -120,38 +120,42 @@ def products():
         conn = get_connection()
         cursor = conn.cursor()
 
-        print("\n📋 GET /products - Buscando produtos...")
+        print("\n📋 GET /products - Iniciando consulta...")
 
-        cursor.execute("""
-            SELECT ProductID, ProductCode, ProductName, Category,
-                   Brand, Line, TechnicalSpecs, ImageData
-            FROM Products
-            ORDER BY ProductName
-        """)
+        # Busca dinâmica das colunas para evitar erro de nomes diferentes no Azure
+        cursor.execute("SELECT TOP 0 * FROM Products")
+        colunas_reais = [column[0] for column in cursor.description]
+        print(f"Colunas detectadas no banco: {colunas_reais}")
+
+        # Query simplificada para garantir compatibilidade
+        cursor.execute("SELECT * FROM Products ORDER BY ProductName")
 
         rows = cursor.fetchall()
         cols = [c[0] for c in cursor.description]
 
-        print(f"Colunas retornadas: {cols}")
-        print(f"Total de produtos: {len(rows)}")
+        print(f"Total de produtos encontrados no banco: {len(rows)}")
 
         data = [dict(zip(cols, r)) for r in rows]
 
-        if data:
-            print(f"Primeiro produto: {data[0]}")
-
+        # Tratamento para garantir que a imageUrl sempre exista para o Frontend
         for p in data:
-            p["imageUrl"] = p.get("ImageData", "")
+            # Mapeia ImageData para imageUrl ou usa uma string vazia
+            p["imageUrl"] = p.get("ImageData") or ""
+            # Garante que campos nulos não quebrem o JSON
+            for key, value in p.items():
+                if value is None:
+                    p[key] = ""
 
-        print(f"✅ Retornando {len(data)} produtos\n")
+        print(f"✅ Retornando {len(data)} produtos com sucesso\n")
         return data
 
     except Exception as e:
-        print(f"❌ Erro ao buscar produtos: {str(e)}")
+        # Log detalhado no console do Azure para diagnóstico
+        print(f"❌ ERRO CRÍTICO no Azure: {str(e)}")
         import traceback
         traceback.print_exc()
-        logger.error(f"Erro ao buscar produtos: {str(e)}")
-        return []
+        # Em vez de retornar [], você pode retornar o erro para testar
+        return {"error": str(e), "trace": "Verificar logs do Azure App Service"}
 
     finally:
         if conn:
