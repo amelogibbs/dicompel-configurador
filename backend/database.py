@@ -3,10 +3,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# ============================================================
-# 🔹 CONEXÃO COM AZURE SQL VIA PYODBC (BACKEND OFICIAL)
-# ============================================================
-
 def get_connection():
     """
     Conecta ao Azure SQL Server com timeout aumentado
@@ -17,7 +13,7 @@ def get_connection():
             "SERVER=tcp:configurador-produto-sql.database.windows.net,1433;"
             "DATABASE=configurador-produto;"
             "UID=adminsql;"
-            "PWD='Dicompel!$$';"
+            "PWD='Dicompel!$$';"  # ← ATUALIZE AQUI COM A NOVA SENHA
             "Encrypt=yes;"
             "TrustServerCertificate=no;"
             "Connection Timeout=60;"
@@ -34,14 +30,12 @@ def get_connection():
         logger.error(f"❌ Erro inesperado: {str(e)}")
         raise Exception(f"Erro ao conectar: {str(e)}")
 
-# ============================================================
-# 🔹 TESTE OPCIONAL
-# ============================================================
-
 if __name__ == "__main__":
     try:
         conn = get_connection()
         print("✅ Conectado ao Azure SQL com sucesso!")
         conn.close()
+    except Exception as e:
+        print(f"❌ Erro ao conectar: {e}")
     except Exception as e:
         print(f"❌ Erro ao conectar: {e}")
