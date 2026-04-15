@@ -11,12 +11,12 @@ def get_connection():
         conn_str = (
             "DRIVER={ODBC Driver 18 for SQL Server};"
             "SERVER=tcp:configurador-produto-sql.database.windows.net,1433;"
-            "DATABASE=configurador-produto;"
-            "UID=adminsql;"
-            "PWD='Dicompel!$$';"  # ← ATUALIZE AQUI COM A NOVA SENHA
-            "Encrypt=yes;"
-            "TrustServerCertificate=no;"
-            "Connection Timeout=60;"
+                "DATABASE=configurador-produto;"
+                "UID=adminsql;"
+                "PWD='Dicompel!$$';"
+                "Encrypt=yes;"
+                "TrustServerCertificate=yes;"  # ← MUDE PARA YES AQUI
+                "Connection Timeout=60;"
         )
         
         conn = pyodbc.connect(conn_str)
