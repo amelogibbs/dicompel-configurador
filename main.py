@@ -219,3 +219,15 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+# Busca a pasta onde o main.py está e navega até o frontend
+BASE_DIR = Path(__file__).resolve().parent
+frontend_dist = BASE_DIR / "frontend" / "dist"
+
+# Debug para você ver no log do Azure se o caminho está certo
+logger.info(f"🔍 Verificando caminho do frontend: {frontend_dist}")
+
+if frontend_dist.exists():
+    logger.info("✅ Pasta dist encontrada!")
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+else:
+    logger.error("❌ Pasta dist NÃO encontrada. Verifique se o build foi enviado ao GitHub.")
