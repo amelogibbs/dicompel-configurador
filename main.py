@@ -25,9 +25,9 @@ else:
     print(f"⚠️  Frontend não encontrado em: {frontend_dist}")
 
 # ===== CORS =====
-app.add_middleware(
+    app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://configurador.dicompel.com.br"], # Em produção, substitua pelo seu domínio real
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
