@@ -34,13 +34,8 @@ else:
     logger.warning(f"⚠️ Frontend não encontrado em: {frontend_dist}")
 
 # ===== CORS (CORRIGIDO) =====
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://configurador.dicompel.com.br"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+allow_origins=["*"]
+
 
 # ======= MODELOS =======
 class LoginRequest(BaseModel):
