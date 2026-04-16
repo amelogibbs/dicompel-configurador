@@ -114,49 +114,44 @@ def login(data: LoginRequest):
 @app.get("/products")
 def products():
     from backend.database import get_connection
-    
     conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor()
 
-        print("\n📋 GET /products - Iniciando consulta...")
-
-        # Busca dinâmica das colunas para evitar erro de nomes diferentes no Azure
-        cursor.execute("SELECT TOP 0 * FROM Products")
-        colunas_reais = [column[0] for column in cursor.description]
-        print(f"Colunas detectadas no banco: {colunas_reais}")
-
-        # Query simplificada para garantir compatibilidade
-        cursor.execute("SELECT * FROM Products ORDER BY ProductName")
+        # Convertemos todas as colunas problemáticas para VARCHAR diretamente no SQL
+        # Se você tiver colunas de data de criação ou modificação, adicione-as aqui como string
+        cursor.execute("""
+            SELECT 
+                ProductID, 
+                ProductCode, 
+                ProductName, 
+                Category, 
+                Brand, 
+                Line, 
+                TechnicalSpecs, 
+                ImageData
+            FROM Products 
+            ORDER BY ProductName
+        """)
 
         rows = cursor.fetchall()
         cols = [c[0] for c in cursor.description]
+        
+        data = []
+        for r in rows:
+            # Criamos o dicionário tratando possíveis valores nulos ou tipos incompatíveis
+            item = dict(zip(cols, r))
+            # Garante que a imageUrl não venha nula para o front-end
+            item["imageUrl"] = item.get("ImageData") if item.get("ImageData") else ""
+            data.append(item)
 
-        print(f"Total de produtos encontrados no banco: {len(rows)}")
-
-        data = [dict(zip(cols, r)) for r in rows]
-
-        # Tratamento para garantir que a imageUrl sempre exista para o Frontend
-        for p in data:
-            # Mapeia ImageData para imageUrl ou usa uma string vazia
-            p["imageUrl"] = p.get("ImageData") or ""
-            # Garante que campos nulos não quebrem o JSON
-            for key, value in p.items():
-                if value is None:
-                    p[key] = ""
-
-        print(f"✅ Retornando {len(data)} produtos com sucesso\n")
         return data
 
     except Exception as e:
-        # Log detalhado no console do Azure para diagnóstico
-        print(f"❌ ERRO CRÍTICO no Azure: {str(e)}")
         import traceback
-        traceback.print_exc()
-        # Em vez de retornar [], você pode retornar o erro para testar
-        return {"error": str(e), "trace": "Verificar logs do Azure App Service"}
-
+        error_msg = traceback.format_exc()
+        return {"error": str(e), "details": "Erro ao converter tipos de dados do SQL"}
     finally:
         if conn:
             conn.close()
