@@ -36,7 +36,7 @@ else:
 # ===== CORS (CORRIGIDO) =====
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://configurador.dicompel.com.br", "http://localhost:3000"],
+    allow_origins=["https://configurador.dicompel.com.br"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
