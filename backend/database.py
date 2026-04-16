@@ -13,7 +13,7 @@ def get_connection():
             "SERVER=tcp:configurador-produto-sql.database.windows.net,1433;"
                 "DATABASE=configurador-produto;"
                 "UID=adminsql;"
-                "PWD='Dicompel!$$';"
+                "PWD='Dicompel!$$;"
                 "Encrypt=yes;"
                 "TrustServerCertificate=yes;"  # ← MUDE PARA YES AQUI
                 "Connection Timeout=60;"
