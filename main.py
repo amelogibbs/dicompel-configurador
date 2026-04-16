@@ -9,6 +9,12 @@ import os
 import logging
 import datetime
 
+BASE_DIR = Path(__file__).parent
+# Se no seu GitHub os arquivos estiverem direto em 'frontend', remova o 'dist'
+frontend_path = BASE_DIR / "frontend" / "dist" 
+
+if frontend_path.exists():
+    app.mount("/assets", StaticFiles(directory=str(frontend_path / "assets")), name="assets")
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
