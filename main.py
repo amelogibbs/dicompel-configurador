@@ -4,7 +4,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthCredentials
 from pydantic import BaseModel, EmailStr, validator
-from pydantic_settings import BaseSettings
 from typing import Optional, List, Dict
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -17,70 +16,155 @@ from functools import lru_cache
 
 # ======================== CONFIGURAÇÃO ========================
 
-class Settings(BaseSettings):
-    """Configurações da aplicação"""
-    SECRET_KEY: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    ENVIRONMENT: str = "development"
-    ALLOWED_ORIGINS: str = "http://localhost:3000"
-    PORT: int = 8000
-    HOST: str = "0.0.0.0"
-    
-    class Config:
-        env_file = ".env"
-
-@lru_cache()
-def get_settings() -> Settings:
-    """Cachear configurações"""
-    return Settings()
-
-# 1. CONFIGURAÇÃO DE LOGGING
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# 2. SEGURANÇA - PASSWORD HASHING
+# 1. SEGURANÇA - PASSWORD HASHING
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# 3. SEGURANÇA - JWT
+# 2. SEGURANÇA - JWT
 security = HTTPBearer()
 
-# 4. DEFINIÇÃO DE CAMINHOS
+# 3. DEFINIÇÃO DE CAMINHOS
 BASE_DIR = Path(__file__).resolve().parent
 frontend_dist = BASE_DIR / "frontend" / "dist"
 
-# 5. WHITELIST DE EXTENSÕES DE ARQUIVO
+# 4. WHITELIST DE EXTENSÕES DE ARQUIVO
 ALLOWED_FILE_EXTENSIONS = {
     ".js", ".css", ".html", ".png", ".jpg", 
     ".jpeg", ".ico", ".json", ".svg", ".gif", ".webp"
 }
 
+# 5. CONFIGURAÇÕES
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-key-change-in-production")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000").split(",")
+
 # 6. INICIALIZAÇÃO DO APP
 app = FastAPI(
     title="API DICOMPEL v2.0",
-    description="API Segura com JWT Authentication",
+    description="API Segura com JWT Authentication + Bcrypt",
     version="2.0.0"
 )
 
 # 7. CONFIGURAÇÃO DE CORS (Restritivo)
-settings = get_settings()
-allowed_origins = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",")]
+allowed_origins = [origin.strip() for origin in ALLOWED_ORIGINS]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,  # ✅ Whitelist ao invés de "*"
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
+# ======================== DADOS DE TESTE (Em Memória) ========================
+
+# Hash das senhas de teste (senha123)
+TEST_PASSWORD_HASH = pwd_context.hash("senha123")
+
+# Usuários de teste
+USERS_DB = {
+    "admin@dicompel.com": {
+        "id": 1,
+        "nome": "Admin DICOMPEL",
+        "email": "admin@dicompel.com",
+        "senha_hash": TEST_PASSWORD_HASH,
+        "perfil": "admin",
+        "ativo": True
+    },
+    "user@dicompel.com": {
+        "id": 2,
+        "nome": "Usuário Teste",
+        "email": "user@dicompel.com",
+        "senha_hash": TEST_PASSWORD_HASH,
+        "perfil": "user",
+        "ativo": True
+    }
+}
+
+# Produtos de teste
+PRODUCTS_DB = [
+    {
+        "ProductID": 1,
+        "ProductCode": "PROD-001",
+        "ProductName": "Eletrônico A",
+        "Category": "Eletrônicos",
+        "Brand": "BrandX",
+        "Line": "Premium",
+        "TechnicalSpecs": "Specs do produto A",
+        "Price": 1500.00,
+        "Stock": 50
+    },
+    {
+        "ProductID": 2,
+        "ProductCode": "PROD-002",
+        "ProductName": "Eletrônico B",
+        "Category": "Eletrônicos",
+        "Brand": "BrandY",
+        "Line": "Standard",
+        "TechnicalSpecs": "Specs do produto B",
+        "Price": 2500.00,
+        "Stock": 30
+    },
+    {
+        "ProductID": 3,
+        "ProductCode": "PROD-003",
+        "ProductName": "Eletrônico C",
+        "Category": "Acessórios",
+        "Brand": "BrandZ",
+        "Line": "Basic",
+        "TechnicalSpecs": "Specs do produto C",
+        "Price": 800.00,
+        "Stock": 100
+    }
+]
+
+# Pedidos de teste
+ORDERS_DB = [
+    {
+        "OrderId": 1,
+        "OrderNumber": "PED-2026-001",
+        "CustomerName": "João Silva",
+        "CustomerEmail": "joao@example.com",
+        "CustomerPhone": "(11) 99999-0001",
+        "RepresentativeID": 1,
+        "Region": "São Paulo",
+        "Status": "ENTREGUE",
+        "CreatedAt": "2026-04-20"
+    },
+    {
+        "OrderId": 2,
+        "OrderNumber": "PED-2026-002",
+        "CustomerName": "Maria Santos",
+        "CustomerEmail": "maria@example.com",
+        "CustomerPhone": "(11) 99999-0002",
+        "RepresentativeID": 2,
+        "Region": "Rio de Janeiro",
+        "Status": "PROCESSANDO",
+        "CreatedAt": "2026-04-22"
+    },
+    {
+        "OrderId": 3,
+        "OrderNumber": "PED-2026-003",
+        "CustomerName": "Carlos Costa",
+        "CustomerEmail": "carlos@example.com",
+        "CustomerPhone": "(11) 99999-0003",
+        "RepresentativeID": 1,
+        "Region": "Minas Gerais",
+        "Status": "PENDENTE",
+        "CreatedAt": "2026-04-25"
+    }
+]
+
 # ======================= MODELOS PYDANTIC =======================
 
 class LoginRequest(BaseModel):
     """Modelo para requisição de login"""
-    email: EmailStr  # ✅ Validação de email
+    email: EmailStr
     password: str
     
     @validator('password')
@@ -126,6 +210,8 @@ class HealthResponse(BaseModel):
     status: str
     message: str
     timestamp: str
+    security: str
+    version: str
 
 # ====================== FUNÇÕES DE SEGURANÇA =======================
 
@@ -152,7 +238,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
         to_encode,
-        settings.SECRET_KEY,
+        SECRET_KEY,
         algorithm="HS256"
     )
     return encoded_jwt
@@ -163,7 +249,7 @@ async def verify_token(credentials: HTTPAuthCredentials = Depends(security)) -> 
     try:
         payload = jwt.decode(
             token,
-            settings.SECRET_KEY,
+            SECRET_KEY,
             algorithms=["HS256"]
         )
         user_id: int = payload.get("sub")
@@ -210,30 +296,16 @@ async def login(data: LoginRequest) -> LoginResponse:
     ✅ Retorna JWT token
     ✅ Sem detalhes sensíveis em caso de erro
     """
-    from backend.database import get_connection
-    conn = None
     try:
-        conn = get_connection()
-        cursor = conn.cursor()
+        # Buscar usuário (em memória para teste)
+        user_data = USERS_DB.get(data.email)
         
-        # SQL parametrizado (proteção contra SQL injection)
-        cursor.execute("""
-            SELECT id, nome, email, senha_hash, perfil, ativo
-            FROM usuarios
-            WHERE email = ?
-        """, (data.email,))
-        
-        row = cursor.fetchone()
-        
-        if not row:
+        if not user_data:
             logger.warning(f"⚠️ Tentativa de login com email inexistente: {data.email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Email ou senha incorretos"
             )
-        
-        cols = [c[0] for c in cursor.description]
-        user_data = dict(zip(cols, row))
         
         # Verificar senha com bcrypt
         if not verify_password(data.password, user_data["senha_hash"]):
@@ -244,9 +316,7 @@ async def login(data: LoginRequest) -> LoginResponse:
             )
         
         # Gerar token
-        access_token_expires = timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": user_data["id"]},
             expires_delta=access_token_expires
@@ -274,9 +344,6 @@ async def login(data: LoginRequest) -> LoginResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro ao fazer login"
         )
-    finally:
-        if conn:
-            conn.close()
 
 @app.get("/api/products")
 async def get_products(current_user: Dict = Depends(verify_token)):
@@ -284,48 +351,14 @@ async def get_products(current_user: Dict = Depends(verify_token)):
     Obter lista de produtos - PROTEGIDO
     ✅ Requer token JWT válido
     """
-    from backend.database import get_connection
-    conn = None
     try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT ProductID, ProductCode, ProductName, Category, 
-                   Brand, Line, TechnicalSpecs, ImageData
-            FROM Products 
-            ORDER BY ProductName
-        """)
-        rows = cursor.fetchall()
-        cols = [c[0] for c in cursor.description]
-        
-        products = []
-        for r in rows:
-            item = dict(zip(cols, r))
-            
-            # Converter ImageData para base64 se existir
-            if item.get("ImageData"):
-                try:
-                    image_b64 = base64.b64encode(item["ImageData"]).decode()
-                    item["imageUrl"] = f"data:image/png;base64,{image_b64}"
-                except Exception as e:
-                    logger.warning(f"Erro ao converter imagem: {str(e)}")
-                    item["imageUrl"] = ""
-            else:
-                item["imageUrl"] = ""
-            
-            products.append(item)
-        
-        return products
-        
+        return PRODUCTS_DB
     except Exception as e:
         logger.error(f"❌ Erro ao buscar produtos: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro ao buscar produtos"
         )
-    finally:
-        if conn:
-            conn.close()
 
 @app.get("/api/orders")
 async def get_orders(current_user: Dict = Depends(verify_token)):
@@ -333,31 +366,14 @@ async def get_orders(current_user: Dict = Depends(verify_token)):
     Obter lista de pedidos - PROTEGIDO
     ✅ Requer token JWT válido
     """
-    from backend.database import get_connection
-    conn = None
     try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT OrderId, OrderNumber, CustomerName, CustomerEmail, CustomerPhone,
-                   RepresentativeID, Region, Status, CONVERT(VARCHAR(30), CreatedAt, 120) as CreatedAt
-            FROM Orders 
-            ORDER BY CreatedAt DESC
-        """)
-        rows = cursor.fetchall()
-        cols = [c[0] for c in cursor.description]
-        
-        return [dict(zip(cols, r)) for r in rows]
-        
+        return ORDERS_DB
     except Exception as e:
         logger.error(f"❌ Erro ao buscar pedidos: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro ao buscar pedidos"
         )
-    finally:
-        if conn:
-            conn.close()
 
 @app.get("/api/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
@@ -368,7 +384,9 @@ async def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
         message="API DICOMPEL v2.0 funcionando",
-        timestamp=datetime.now().isoformat()
+        timestamp=datetime.now().isoformat(),
+        security="JWT + Bcrypt",
+        version="2.0.0"
     )
 
 # ====================== SERVIR FRONTEND ======================
@@ -379,7 +397,7 @@ if frontend_dist.exists():
     if assets_path.exists():
         app.mount("/assets", StaticFiles(directory=str(assets_path)), name="assets")
 else:
-    logger.warning(f"⚠️ Pasta frontend/dist não encontrada em: {frontend_dist}")
+    logger.info(f"⚠️ Pasta frontend/dist não encontrada (usando dados de teste)")
 
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
@@ -434,13 +452,23 @@ async def http_exception_handler(request, exc: HTTPException):
 if __name__ == "__main__":
     import uvicorn
     
-    logger.info(f"🚀 Iniciando API DICOMPEL v2.0")
-    logger.info(f"📍 Ambiente: {settings.ENVIRONMENT}")
+    port = int(os.getenv("PORT", 8000))
+    
+    logger.info("=" * 60)
+    logger.info("🚀 Iniciando API DICOMPEL v2.0")
+    logger.info("=" * 60)
+    logger.info(f"📍 Host: 0.0.0.0:{port}")
     logger.info(f"🔓 CORS permitidas: {allowed_origins}")
+    logger.info(f"📚 Documentação: http://localhost:{port}/docs")
+    logger.info("=" * 60)
+    logger.info("✅ Usuários de teste:")
+    logger.info("   • Email: admin@dicompel.com | Senha: senha123")
+    logger.info("   • Email: user@dicompel.com | Senha: senha123")
+    logger.info("=" * 60)
     
     uvicorn.run(
         app,
-        host=settings.HOST,
-        port=settings.PORT,
+        host="0.0.0.0",
+        port=port,
         log_level=logging.INFO
     )
